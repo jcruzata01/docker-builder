@@ -1,0 +1,47 @@
+name: Build Docker Image from simstudioai/sim
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Etiqueta para la imagen Docker (e.g. sim:latest)'
+        required: true
+        default: 'sim:latest'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verificar espacio libre en disco
+        run: df -h
+
+      - name: Clonar repositorio simstudioai/sim
+        run: |
+          git clone https://github.com/simstudioai/sim.git
+
+      - name: Construir imagen Docker
+        run: |
+          docker build -t ${{ github.event.inputs.image_tag }} \
+            -f sim/docker/realtime.Dockerfile \
+            sim
+
+      - name: Mostrar tamaño de imagen construida
+        run: |
+          docker images
+
+      - name: Instalar zstd para compresión agresiva
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd
+
+      - name: Comprimir imagen Docker usando zstd
+        run: |
+          docker save ${{ github.event.inputs.image_tag }} | zstd -19 -T0 -o sim_image.tar.zst
+          ls -lh sim_image.tar.zst
+
+      - name: Subir artifact (imagen Docker comprimida)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-docker-image
+          path: sim_image.tar.zst

@@ -1,0 +1,71 @@
+name: Kubespray Offline Downloader
+
+on:
+  workflow_dispatch:
+
+jobs:
+  download-kubespray-offline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Clone kubespray-offline repository
+        run: |
+          git clone https://github.com/kubespray-offline/kubespray-offline.git
+          cd kubespray-offline
+          git fetch --all
+          git checkout main
+
+      - name: Set versions for components
+        run: |
+          cd kubespray-offline
+          cat > versions.sh << 'EOF'
+          export K8S_VERSION=v1.33.3
+          export ETCD_VERSION=v3.5.21
+          export DOCKER_VERSION=28.0
+          export CONTAINERD_VERSION=2.1.3
+          export CRIO_VERSION=1.33.2
+          export CNI_VERSION=v1.4.1
+          export CALICO_VERSION=v3.29.4
+          export CILIUM_VERSION=v1.17.3
+          export FLANNEL_VERSION=v0.26.7
+          export KUBE_OVN_VERSION=v1.12.21
+          export KUBE_ROUTER_VERSION=v2.1.1
+          export MULTUS_VERSION=v4.1.0
+          export KUBE_VIP_VERSION=v0.8.0
+          export CERT_MANAGER_VERSION=v1.15.3
+          export COREDNS_VERSION=v1.12.0
+          export INGRESS_NGINX_VERSION=v1.12.1
+          export ARGOCD_VERSION=v2.14.5
+          export HELM_VERSION=v3.18.4
+          export METALLB_VERSION=v0.13.9
+          export REGISTRY_VERSION=2.8.1
+          export AWS_EBS_CSI_VERSION=v0.5.0
+          export AZURE_CSI_VERSION=v1.10.0
+          export CINDER_CSI_VERSION=v1.30.0
+          export GCP_PD_CSI_VERSION=v1.9.2
+          export LOCAL_PATH_PROVISIONER_VERSION=v0.0.24
+          export LOCAL_VOLUME_PROVISIONER_VERSION=v2.5.0
+          export NFD_VERSION=v0.16.4
+          EOF
+
+      - name: Run download-all.sh
+        run: |
+          cd kubespray-offline
+          source versions.sh
+          chmod +x download-all.sh
+          ./download-all.sh
+
+      - name: Compress output
+        run: |
+          cd kubespray-offline
+          tar -czvf kubespray-offline-packages.tar.gz outputs/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubespray-offline-packages
+          path: kubespray-offline/kubespray-offline-packages.tar.gz
+          retention-days: 7

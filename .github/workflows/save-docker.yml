@@ -1,0 +1,35 @@
+name: Save Docker Image - 0709
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Nombre de la imagen Docker (e.g. ubuntu:22.04)'
+        required: true
+        default: 'ubuntu:22.04'
+
+jobs:
+  save-docker-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Mostrar imagen solicitada
+        run: echo "Descargando imagen ${{ github.event.inputs.image_name }}"
+
+      - name: Descargar imagen Docker
+        run: docker pull ${{ github.event.inputs.image_name }}
+
+      - name: Guardar imagen Docker en archivo
+        id: save
+        run: |
+          image_name="${{ github.event.inputs.image_name }}"
+          file_name="${image_name//[:\/]/_}.tar.gz"
+          docker save "$image_name" | gzip > "$file_name"
+          echo "file_name=$file_name" >> $GITHUB_OUTPUT
+      
+      - name: Subir imagen como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: ${{ steps.save.outputs.file_name }}
+

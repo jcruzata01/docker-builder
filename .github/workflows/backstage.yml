@@ -1,0 +1,56 @@
+name: Build Backstage Docker Image from Scratch
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-backstage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Create Backstage app
+        run: |
+          if [ ! -d "my-backstage-app" ]; then
+            npx @backstage/create-app my-backstage-app --skip-install --yes
+          fi
+
+      - name: Install dependencies
+        run: |
+          cd my-backstage-app
+          yarn install --frozen-lockfile
+
+      - name: Build backend
+        run: |
+          cd my-backstage-app
+          yarn build:backend
+
+      - name: Build Docker image
+        run: |
+          cd my-backstage-app
+          IMAGE_NAME=backstage:latest
+          docker build -f packages/backend/Dockerfile -t $IMAGE_NAME .
+
+      - name: Save Docker image as artifact
+        run: |
+          mkdir -p docker-artifacts
+          docker save backstage:latest -o docker-artifacts/backstage.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backstage-docker-image
+          path: docker-artifacts/backstage.tar

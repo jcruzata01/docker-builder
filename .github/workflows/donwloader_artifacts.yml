@@ -1,0 +1,37 @@
+name: Download and Upload Artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL del archivo a descargar'
+        required: true
+        type: string
+
+jobs:
+  download_compress_upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Crear directorio temporal
+        run: mkdir -p download_dir
+
+      - name: Extraer nombre de archivo desde la URL
+        id: extract
+        run: |
+          FILENAME=$(basename "${{ inputs.url }}")
+          echo "filename=$FILENAME" >> $GITHUB_OUTPUT
+
+      - name: Descargar archivo
+        run: |
+          curl -L "${{ inputs.url }}" -o download_dir/${{ steps.extract.outputs.filename }}
+
+      - name: Comprimir en .tar
+        run: |
+          tar -cvf artifact.tar -C download_dir .
+
+      - name: Subir artefacto comprimido
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.extract.outputs.filename }}.tar
+          path: artifact.tar
